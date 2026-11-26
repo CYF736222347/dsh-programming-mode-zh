@@ -1,0 +1,58 @@
+{
+  "name": "dsh-programming-mode-zh",
+  "version": "1.0.0",
+  "description": "编程模式 · 中文：在标准模式全部能力之上强制执行 Superpowers 工程纪律（先查技能、先头脑风暴、先写计划、TDD、找根因、完成前验证、交付前审查），persona 与 reasoning 默认简体中文，自带 21 个 superpowers / ponytail 技能。ziduup/dsh-programming-mode 的汉化分支，预设 id 为 programming-zh，可与上游共存。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "CYF736222347",
+    "url": "https://github.com/CYF736222347"
+  },
+  "contributors": [
+    {
+      "name": "子都 (ziduup)",
+      "url": "https://github.com/ziduup",
+      "note": "上游 dsh-programming-mode 的作者；本仓库的预设组合、安装器与技能打包来自该仓库"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CYF736222347/dsh-programming-mode-zh.git"
+  },
+  "homepage": "https://github.com/CYF736222347/dsh-programming-mode-zh#readme",
+  "bugs": {
+    "url": "https://github.com/CYF736222347/dsh-programming-mode-zh/issues"
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.5"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "preset",
+    "README.md",
+    "NOTICE.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh-plugin",
+    "dsh-bundle",
+    "agent-preset",
+    "superpowers",
+    "chinese",
+    "zh-cn"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

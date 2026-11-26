@@ -1,0 +1,4 @@
+# Keep every bundled file byte-identical in the repository: the skills are
+# redistributed verbatim from their upstreams, and CRLF normalization would
+# silently differ from those sources.
+* -text

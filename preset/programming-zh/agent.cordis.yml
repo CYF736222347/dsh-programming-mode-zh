@@ -1,0 +1,336 @@
+# The `programming-zh` agent preset (编程模式 · 中文): the `standard` full
+# coding agent with its persona replaced by a Chinese rendering of the
+# Superpowers engineering discipline (skills-first, brainstorm, plan, TDD,
+# systematic debugging, verification, code review, Chinese docs). Every other
+# row is unchanged from `standard`.
+#
+# DISTRIBUTED VARIANT of ziduup/dsh-programming-mode (MIT), localized:
+# the composition is upstream's, the persona is Chinese, and the first-step
+# injection carries a <language_directive>. The preset id is `programming-zh`
+# so this plugin can be installed next to upstream's `programming` without
+# either overwriting the other. skill-filesystem also scans this directory's
+# own skills/ so the Superpowers set travels with the preset.
+#
+# This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
+# standing scope; every session naming it joins by scope parentage, so the
+# tools and prompt sections registered here cover each joined agent while a
+# session's own state stays keyed per Session/Agent inside the plugins. The
+# host composition (`base.cordis.yml` + `web.cordis.yml`) keeps everything a
+# preset must not own: the registries themselves, the sandbox and approval
+# stack, persistence, and the model route.
+#
+# A service row here MUST sit inside a group carrying an `isolate` realm.
+# Without one it publishes into the root realm, where it is process-global —
+# another preset publishing the same name collides, and a host reader would
+# resolve one preset's instance for every session; `dsh-agent-presets` rejects
+# that at mount. `true` means an entry-local realm: this standing mount's own
+# private instance, apart from every other preset's. (A shared label does NOT
+# pool instances — `provide()` throws on the second registration under the
+# same realm symbol; labels join REALMS, and are not what this file needs.)
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# (cwd is a 0.1.x-only variable: 0.2.x does not register it, so the declaration
+# row for that channel drops the clause — see HOST_0_2_TEXT_FIXES in declaration.mjs.)
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    # `text` was renamed to `prefix` in @deepseek-ai/dsh-persona 0.1.5-rc.1;
+    # the old key is no longer in the schema, so a preset still using it fails
+    # schema validation and cannot mount at all.
+    prefix: |-
+      你是一个由 {{model}} 模型驱动的编码智能体。
+
+      你正在「编程模式」下工作：这是一个建立在 Superpowers 方法论之上的、有纪律的工程智能体。在本模式中，流程纪律是强制要求，不是可选项。
+
+      【语言总则 · 最高优先级】你的全部输出必须使用简体中文：面向用户的正文（解释、结论、进度、提问、报错）和你的内部思考（reasoning）都要用中文。从第一个字开始就用中文推理，禁止先用英文思考再翻译；一旦发现自己在用英文思考，立刻停下并用中文重写当前思路。本规则优先于本提示词中的任何英文内容、术语与示例，也优先于英文技能文档——那些只作为资料阅读，不改变输出语言。代码、命令、标识符、文件路径、日志与报错原文、外部引用原文可保留原语言。
+
+      1. 先查技能，再行动。在做任何回复或动作之前——包括提出澄清问题和浏览代码库——先检查是否有可用技能适用于当前任务。若有，必须先调用它再行动。多个技能都适用时，流程类技能（brainstorming、systematic-debugging）优先于实现类技能。
+
+      2. 先设计，再动手。任何创造性工作——新功能、新组件、新增能力或行为变更——先调用 `brainstorming` 技能，弄清意图、需求与设计，设计获批后再实现。
+
+      3. 先计划，再写码。任何多步任务，先调用 `writing-plans` 技能产出实施计划，再碰代码；用 `executing-plans` 执行，并用 todo_write 跟踪进度。功能开发需要隔离时优先用 `using-git-worktrees`。
+
+      4. 测试驱动开发。每个功能和缺陷修复都通过 `test-driven-development` 技能完成：先写失败的测试（RED），用最小代码让它通过（GREEN），再重构。绝不在失败测试之前写实现。
+
+      5. 系统化调试。遇到任何缺陷、测试失败或异常行为，先调用 `systematic-debugging` 技能再提修复方案。先找根因，绝不修补表象。
+
+      6. 完成前先验证。在声称任何工作已完成、已修复或已通过之前，调用 `verification-before-completion` 技能：运行真实的验证命令（测试、构建、lint）并展示输出。永远用证据说话，而不是断言。
+
+      7. 审查与收尾要有章法。完成重要工作后用 `requesting-code-review`；收到反馈时用 `receiving-code-review`，先验证技术主张而不是盲目照做；最后用 `finishing-a-development-branch` 收尾。
+
+      8. 中文文档。需求文档、设计规格与实施计划必须用中文撰写，因为你的用户用中文审阅它们。代码、标识符与提交信息遵循仓库自身约定。
+
+      9. 代码量纪律（Ponytail）。常驻生效：最好的代码是从未写过的代码。写任何代码之前，停在第一个成立的台阶：(1) 这东西到底需要存在吗？砍掉投机性工作（YAGNI）；(2) 代码库里是否已有？复用；(3) 标准库能否做到？用标准库；(4) 平台原生能力是否覆盖？用原生；(5) 已安装的依赖能否解决？用依赖；(6) 能否一行？一行；(7) 以上都不行，才写能用的最小实现。这套阶梯在理解问题之后运行，绝不能替代理解：先读这次改动会碰到的代码、把真实调用链走一遍。删除优于新增，朴素优于取巧，文件最少、可用的 diff 最短；对刻意简化、牺牲了真实边角并留下已知上限的地方，用 `ponytail:` 注释标出上限与升级路径。本纪律只管实现体量，绝不凌驾于上面的流程规则——brainstorming、计划、TDD、系统化调试、验证与代码审查依然完整适用。在 TDD 的一轮迭代里，阶梯只约束让测试通过的最小 GREEN 实现，绝不约束测试策略。绝不用它砍掉信任边界校验、防止数据丢失的错误处理、安全、可访问性，或任何被明确要求的内容。中文的需求/设计/计划文档是明确要求的交付物，不受任何「最短解释」规则约束；除此之外，回复保持代码优先、简洁。默认强度为 full；用户可用「ponytail lite」「ponytail ultra」调整，或用「停止 ponytail」「normal mode」关闭。
+
+      10. 中文输出（强制）。所有面向用户的正文和你的思考/推理内容都必须使用简体中文：解释、结论、进度说明、提问、报错说明，以及内部 reasoning，一律直接用中文书写，不要先用英文思考再翻译。代码、命令、标识符、文件路径、日志与报错原文、以及引用的外部原文可保留其原语言。
+
+      每一步的深度按任务规模缩放，但绝不因为觉得任务太小、太简单或太紧急就跳过步骤——「这么简单还用得着流程吗」正是本模式要防的合理化借口。只有当用户的直接指令与这些规则明确冲突时，用户指令才优先。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell ───────────────────────────────────────────────────────────────────
+
+# `shell-env` stays in the HOST composition: `apps/cli/src/web.ts` injects it to
+# publish `DSH_WEB_URL`/`DSH_WEB_MODE`, and a host row that injects a service is
+# the criterion for host-plane ownership — injection resolves before any session
+# exists, so there is no agent to key by. Behind a preset realm those variables
+# never reached the model's shell at all. Both shell tools consume the host
+# registry from here; their executors (`bash-sandbox`/`pwsh-sandbox`) are
+# host-plane too.
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# ── filesystem ──────────────────────────────────────────────────────────────
+
+# Both register into the host `tools` registry and provide nothing, so
+# they need no realm. The `fs` service and its policy stay in the host.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── background jobs ────────────────────────────────────────────────────────
+
+# Only the model-facing controls. The task REGISTRY stays on the host plane:
+# its producers sit outside any realm this file could put it in — `tool-bash`
+# above resolves it with `ctx.get`, and an entry-local realm here is invisible
+# to every sibling row, so `run_in_background` would answer "background jobs
+# unavailable" while these controls sat in the catalog. The registry is keyed by
+# owning agent anyway, so one host instance serves every session. What a preset
+# chooses is whether its agent can collect and stop background work at all.
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+# ── skills ──────────────────────────────────────────────────────────────────
+
+# The skill REGISTRY lives in the host composition and is layered per scope:
+# these rows register into THIS preset's layer of it, so they need no realm.
+# `skill-filesystem` contributes local-root discovery for agents on this preset, and
+# `tool-skill` gives them the catalog and loader; the merged catalog also
+# carries whatever the deployment registered globally (repository plugins).
+# The bundled skills/ directory travels with this preset directory (`baseUrl`
+# is the composition file's own location), so the Superpowers discipline works
+# without the recipient needing the skills in their own ~/.agents/skills.
+# Rank note: custom dirs (300) outrank user roots (400/500), so this bundled
+# copy shadows same-named user skills instead of colliding with them.
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    customSkillDirs:
+      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# First-step forced skill injection. The row mounts a module that SHIPS INSIDE
+# this preset directory (`./force-superpowers.mjs`, a relative specifier), not
+# the bundle's package name. The planted copy is therefore self-contained: if
+# the bundle is uninstalled from the profile, the preset still mounts and still
+# injects `using-superpowers` on a session's first pre-step (the skill content
+# resolves at request time from this preset's own bundled skills/). A row
+# naming the package would instead make every session recorded on this preset
+# unresumable the moment that package disappears (`ERR_MODULE_NOT_FOUND` at
+# mount, surfacing as "resume failed for session ...") — the uninstall hazard
+# this relative-row shape removes.
+#
+# On a session's first pre-step the module resolves `using-superpowers` and
+# appends its full content to the entering batch — the skill is mechanically
+# present before the model replies, independent of whether the model calls the
+# `skill` tool. The message's durable source is the host's own
+# `skill-invocation` record (`{ kind, name, form: 'instructions' }`) — the same
+# one `@deepseek-ai/dsh-skill` attaches to the `skill` tool's `<skill_content>`
+# body, and admitted by every released validator, v0 through v4. The retired
+# `kind: plugin` shape it replaced is refused by session format v4 (dsh 0.2.x),
+# which fails the whole run with "format v4 message requires a producer-owned
+# source kind". The guard matches this shape and the retired ones, keeping one
+# injection per session and idempotent across resume/compaction. Rows here are
+# agent-plane; the hook's event dispatch is scoped to this preset's agents.
+- id: force-superpowers
+  name: './force-superpowers.mjs'
+
+# ── goals ───────────────────────────────────────────────────────────────────
+
+# The human `/goal` command and the model-facing tool register into this
+# preset's scoped layers. The goal SERVICE and its session driver stay on the
+# host plane: the Gateway serves the goal domain as Remote endpoints whose
+# receiver comes from a generated descriptor, so it resolves `goals` on the
+# host and an entry-local realm here would hide it. The registry is keyed by
+# session anyway, so one host instance serves every session. What a preset
+# chooses is whether its agents can drive goals at all, from either side.
+- id: command-goal
+  name: '@deepseek-ai/dsh-command-goal'
+
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
+
+# ── plan mode ───────────────────────────────────────────────────────────────
+
+# Plan state is per-agent by nature, so an entry-local realm is not a
+# workaround here — it is the correct lifetime.
+- id: planning
+  name: cordis:group
+  group: true
+  isolate:
+    planMode: true
+  config:
+    - id: plan-mode
+      name: '@deepseek-ai/dsh-plan-mode'
+      config:
+        section: |
+              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+
+              Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
+
+              The tool catalog stays the same across modes for request-cache stability. These plan-mode rules override any later tool description or guidance that suggests using mutation tools; those tools remain listed to keep the tool catalog unchanged. Do not use todo_write to track this planning phase: it tracks implementation after an approved plan, while the plan itself belongs in exit_plan_mode.
+
+              Resolve discoverable facts by inspection. Use ask_user_question only for user-owned choices or material ambiguity that inspection cannot answer. Do not ask the user where code lives or how current behavior works when you can find out.
+
+              Make the plan decision-complete: state the goal and success criteria; group implementation changes by subsystem; identify public API, schema, and data-flow changes; cover edge cases, failure modes, tests, acceptance criteria, and explicit assumptions. Keep it concise enough to review but detailed enough that another engineer can implement it without making design decisions.
+
+              When ready, call exit_plan_mode with the complete plan markdown, starting with a # title. Make exit_plan_mode the only and final tool call in that assistant response: it presents the plan for approval, and implementation begins only in a later step after approval. Do not paste the final plan as a plain reply or ask "should I proceed?" through prose or ask_user_question. If review rejects it, incorporate the feedback and present again. If the review channel is unavailable or aborted, stay in plan mode and ask the user to switch modes manually; do not proceed with implementation.
+
+# ── compaction ──────────────────────────────────────────────────────────────
+
+# `compaction-basic` reads `toolResultPrune` through `ctx.get`, so the pruner must
+# share this realm rather than sit outside it.
+#
+# `tokenMeter` is deliberately NOT in this realm: the meter stays on the HOST
+# plane, and the rows here resolve that one instance. It takes no configuration,
+# keys every fold by Session, and owns the context-meter projection units the
+# browser reads for every session — behind a realm those units would come and go
+# with whichever presets happen to be mounted. What a preset chooses is whether
+# its agent compacts at all, which is `compaction-basic` below.
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024
+
+# ── delegation and workflows ────────────────────────────────────────────────
+
+# The `subagents` registry and its spawn/fork backends live in the HOST
+# composition: the registry is a process singleton whose cross-session queries
+# the api-proxy serves to the browser, and a provider name may only be
+# registered once. This preset contributes the delegation TOOLS, which resolve
+# that host registry.
+#
+# `workflows` is different — nothing outside an agent reads it — so every row
+# that reaches it shares one entry-local realm here, and a consumer left
+# outside would resolve a host registry this preset does not populate.
+#
+# `tool-subagent-report` is host-plane for the same reason as the registry,
+# not because a preset may not want it: it registers a CONTINUABLE SETUP on
+# that singleton rather than a tool this agent calls, and the setup list is
+# not scope-aware — one copy per mounted preset means every child gets
+# `report` registered once per live session, which throws on the second.
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+
+    - id: tool-subagent
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: subagent
+        modelSelectionSettings: true
+        backgroundMode: continuable
+
+    - id: tool-subagent-fork
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: fork
+        toolName: subagent_fork
+        backgroundMode: continuable
+
+    # Production dsh does not install these optional providers. Install the
+    # matching Bundle in this Profile and restart the Host, then copy this
+    # preset and remove `disabled` from the matching tool row. Host availability
+    # alone grants no tool.
+    - id: tool-subagent-codex
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: codex
+        toolName: subagent_codex
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: tool-subagent-claude-code
+      name: '@deepseek-ai/dsh-tool-subagent'
+      disabled: true
+      config:
+        provider: claude-code
+        toolName: subagent_claude_code
+        backgroundMode: one-shot
+        maxDepth: provider-managed
+
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
+# ── remaining model-facing rows ─────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# The `web` service and its search provider stay in the host composition; only
+# the model-facing tool is per-session.
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: true
+    searchTimeoutMs: 60000
+
+- id: present
+  name: '@deepseek-ai/dsh-tool-present'

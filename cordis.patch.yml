@@ -1,0 +1,11 @@
+# dsh bundle patch for dsh-programming-mode-zh.
+# Inserts one HOST plugin row: at profile boot its apply() plants the bundled
+# 编程模式 · 中文 preset directory into the roster's first user-trust preset root
+# (by default $DSH_HOME/.agent-presets/programming-zh) and, on a dsh 0.2.x
+# host, writes the matching declaration row into the profile's cordis.patch.yml.
+# NOTE: `name` must be the INSTALLED package name — the loader imports this
+# specifier from the profile's node_modules, so a stale bare name makes the
+# profile tree fail to boot (ERR_MODULE_NOT_FOUND).
+- insert:
+    - id: programming-mode-zh-installer
+      name: 'dsh-programming-mode-zh'
